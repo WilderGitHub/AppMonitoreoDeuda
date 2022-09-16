@@ -4,7 +4,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 from junciones import *
 #Archivo de parámetros, movimientos y palabras clave
 arch='goideuda 2022.xls'
-menosEstas=['cve_debe_haber','cod_moneda','cod_movimiento','esdeuda','DesembPtmo','','']
+menosEstas=['cve_debe_haber','cod_movimiento','esdeuda','DesembPtmo','',''] #'cod_moneda',
 import re
 
 #Aqui empezaría la onda
@@ -16,7 +16,7 @@ layout = [[sg.T("")],
           losInputs("Archivo: ","-GOI2-","GOI",34),
           [sg.Button("Procesar", pad=((350, 0), 30), font='Arial 12', button_color=('black'))]]
 # Creamos la ventana
-window = sg.Window('Moni toreo deuda externa', layout, size=(750, 150))
+window = sg.Window('Moni deuda pendiente', layout, size=(750, 150))
 # escuchamos los eventos
 while True:
     event, values = window.read()
@@ -28,7 +28,7 @@ while True:
         bdBruto.columns = map(str.lower, bdBruto.columns)
         # reducimos columnas 
         bdBruto=reducirColumnas(os.path.abspath(values["GOI"]),bdBruto)   
-        bdBruto["esdeuda"] = bdBruto["glosa_comprob"].map(lambda x:esdeuda(x,acreedor,acreedorDesemb))
+        bdBruto["esdeuda"] = bdBruto["glosa_comprob"].map(lambda x:esdeuda(x,acreedor,acreedorDesemb,debidoacreedor))
         bdDeuda=bdBruto[bdBruto["esdeuda"]==True]
         bdDeuda= bdDeuda[bdDeuda["cod_mayor"].isin(mayores)]
         #print(bdDeuda.shape)
@@ -49,10 +49,11 @@ while True:
         bdDeuda["MonedaComisiones"]=bdBruto["glosa_comprob"].map(lambda x:extraeMoneda(x,montos[2]+buscaMontos))
         bdDeuda["PagoComisionesMO"]=bdBruto["glosa_comprob"].map(lambda x:extraeMonto(x,montos[2]+buscaMontos))
         bdDeuda["PagoComisiones$us"]=bdDeuda.apply(montoPagadoC, axis=1)
+        bdDeuda["Pagado"]=bdBruto["cod_mayor"].map(lambda x: "Pagado" if x == 10 else None)
         bdDeudaOK=bdDeuda.loc[:, ~bdDeuda.columns.isin(menosEstas)]
         
         nombre,ruta=nombrecito(bdDeudaOK,"fecha_dia")
         bdDeudaOK.to_excel(ruta+"/"+nombre+".xlsx", index=False)
-        
-        print("Ya hemos generado el excel oe")
+        sg.Popup('Oe', 'Ya hemos generado el excel oe')    
+        #print("Ya hemos generado el excel oe")
         

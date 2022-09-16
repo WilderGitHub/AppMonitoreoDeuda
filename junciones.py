@@ -4,21 +4,27 @@ import re
 import PySimpleGUI as sg#funciones
 from dbfread import DBF
 import pandas as pd
+import datetime
+import requests
+import json
+import pprint
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 casosEspeciales=['BID','CAF','IDA']
 mayores = [10,381,404,406]
+currencies = {"BS": 69,"BS ": 69,"UFV":76,"USD": 34,"EUR": 53,"KRW":999,"RMY": 998,"MVDOL": 75,"JPY":20}
 montos=['CAPITAL ','INTERESES ','COMISIONES ']
-desAcree=['DESEMBOLSO DEL? ','(?= PR.STAMO)']
-desPtmo=['POR DESEMBOLSO DE \w+ PRÉSTAMO ',' ']
+desAcree=['DESEMBOLSO DEL?[ LA]*','(?= PR.STAMO)']
+desPtmo=['POR DESEMBOLSO DEL?[ LA]* \w+ PR.STAMO ',' ']
 
-akey=['PAGO A ','(?= PRÉSTAMO)']
-pkey=['PRÉSTAMO ',' VCTO.']
+akey=['PAGO AL?','(?= PR.STAMO)']
+debidokey=['PAGO PR.STAMO ',' VCTO.']
+pkey=['PR.STAMO ',' VCTO.']
 dkey=['POR CUENTA DE ',' ,']
 
-buscaMontos = '(\w+) ((\w+)($|\S+))'
+buscaMontos = '(...)\s?((\w+)($|\S+))'
 buscaEntidades ='(.+?)'
 
 buscaEntidades1 ='((.+?) (.+?)|(.+?))'
@@ -27,9 +33,29 @@ acreedorDesemb=desAcree[0]+buscaEntidades+desAcree[1]
 ptmoDesemb=desPtmo[0]+buscaEntidades1+desPtmo[1]
 
 acreedor=akey[0]+buscaEntidades+akey[1]
+debidoacreedor=debidokey[0]+buscaEntidades+debidokey[1]
 ptmo=pkey[0]+buscaEntidades+pkey[1]
 deudor=dkey[0]+buscaEntidades+dkey[1]
 
+
+def convierteFecha(x):
+    y = datetime.datetime.strptime(str(x), '%Y-%m-%d  %H:%M:%S')
+    return str(y.date())
+
+    
+def tc(dentra,sale,fecha):
+    proxies = {
+       'http': 'http://rserdan:789789++uiouio@10.1.11.50:8080',
+       'https': 'http://rserdan:789789++uiouio@10.1.11.50:8080',
+    }
+    base=dentra
+    out_curr=sale
+    start_date=fecha
+    end_date=fecha
+    url = 'https://api.exchangerate.host/timeseries?base={0}&start_date={1}&end_date={2}&symbols={3}'.format(base,start_date,end_date,out_curr)
+    response = requests.get(url, proxies=proxies)
+    data = response.json()
+    return data["rates"][fecha][sale]
 
 def losInputs(nombreCampo,inputKey,fileKey, espacio):
     fila=[sg.Text(nombreCampo),
@@ -61,8 +87,8 @@ def reducirColumnas (nombreArchivo,ddff):
                                          'monto_mn', 'glosa_comprob', 'nro_comprob', 'cod_mayor')]
         return bdReducida
 
-def esdeuda(texto,criterio1,criterio2):
-    if extraeEntidades(texto,criterio1) or extraeEntidades(texto,criterio2):
+def esdeuda(texto,criterio1,criterio2,criterio3):
+    if extraeEntidades(texto,criterio1) or extraeEntidades(texto,criterio2) or extraeEntidades(texto,criterio3):
         return True
     else:
         return False
@@ -129,7 +155,7 @@ def separa(s):
 
 
 def montoDesembolsado (x):
-    if x['cve_debe_haber']=="D":
+    if x['cve_debe_haber']=="D" and x['cod_mayor']==10:
         #normalmente es Dólares, pero podrían haber otras monedas, hay que generalizar la fórmula oe.
         return round(x['monto_mn']/x['factor_conv_mo_mn'],2)
 def montoPagadoK(x):
@@ -139,7 +165,15 @@ def montoPagadoK(x):
         except:
             return None
         else:    
-            return round(x["PagoCapitalMO"]*x['factor_conv_mo_mn']/6.86,2)
+            if x["MonedaCapital"]=="USD":
+                return round((x["PagoCapitalMO"]*1)/1,2)
+            else:
+                
+                if currencies[x["MonedaCapital"]]==x['cod_moneda']:
+                    return round((x["PagoCapitalMO"]*x['factor_conv_mo_mn'])/6.86,2)
+                else:
+                    w = tc(x["MonedaCapital"],"USD",convierteFecha(x["fecha_dia"]))
+                    return round(x["PagoCapitalMO"]*w,2)
         
 def montoPagadoI(x):
     if x['cve_debe_haber']=="H":
