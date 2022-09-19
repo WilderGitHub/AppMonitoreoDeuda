@@ -42,11 +42,12 @@ def convierteFecha(x):
     y = datetime.datetime.strptime(str(x), '%Y-%m-%d  %H:%M:%S')
     return str(y.date())
 
-    
-def tc(dentra,sale,fecha):
+usuario = "rserdan"
+pasguor="789789++uiouio"
+def tc(dentra,sale,fecha,usuario,pasguor):
     proxies = {
-       'http': 'http://rserdan:789789++uiouio@10.1.11.50:8080',
-       'https': 'http://rserdan:789789++uiouio@10.1.11.50:8080',
+       'http': 'http://' + usuario +':' + pasguor + '@10.1.11.50:8080',
+       'https': 'http://' + usuario +':' + pasguor + '@10.1.11.50:8080',
     }
     base=dentra
     out_curr=sale
@@ -158,6 +159,8 @@ def montoDesembolsado (x):
     if x['cve_debe_haber']=="D" and x['cod_mayor']==10:
         #normalmente es Dólares, pero podrían haber otras monedas, hay que generalizar la fórmula oe.
         return round(x['monto_mn']/x['factor_conv_mo_mn'],2)
+
+
 def montoPagadoK(x):
     if x['cve_debe_haber']=="H":
         try:
@@ -172,9 +175,9 @@ def montoPagadoK(x):
                 if currencies[x["MonedaCapital"]]==x['cod_moneda']:
                     return round((x["PagoCapitalMO"]*x['factor_conv_mo_mn'])/6.86,2)
                 else:
-                    w = tc(x["MonedaCapital"],"USD",convierteFecha(x["fecha_dia"]))
+                    w = tc(x["MonedaCapital"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
                     return round(x["PagoCapitalMO"]*w,2)
-        
+
 def montoPagadoI(x):
     if x['cve_debe_haber']=="H":
         try:
@@ -182,7 +185,33 @@ def montoPagadoI(x):
         except:
             return None
         else:    
-            return round(x["PagoInteresesMO"]*x['factor_conv_mo_mn']/6.86,2)   
+            if x["MonedaIntereses"]=="USD":
+                return round((x["PagoInteresesMO"]*1)/1,2)
+            else:
+                
+                if currencies[x["MonedaIntereses"]]==x['cod_moneda']:
+                    return round((x["PagoInteresesMO"]*x['factor_conv_mo_mn'])/6.86,2)
+                else:
+                    w = tc(x["MonedaIntereses"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
+                    return round(x["PagoInteresesMO"]*w,2)
+        
+''' def montoPagadoI(x):
+    if x['cve_debe_haber']=="H":
+        try:
+            x["PagoInteresesMO"]*x['factor_conv_mo_mn']
+        except:
+            return None
+        else:    
+            return round(x["PagoInteresesMO"]*x['factor_conv_mo_mn']/6.86,2)    '''
+''' def montoPagadoC(x):
+    if x['cve_debe_haber']=="H":
+        try:
+            x["PagoComisionesMO"]*x['factor_conv_mo_mn']
+        except:
+            return None
+        else:    
+            return round(x["PagoComisionesMO"]*x['factor_conv_mo_mn']/6.86,2)  '''
+
 def montoPagadoC(x):
     if x['cve_debe_haber']=="H":
         try:
@@ -190,7 +219,17 @@ def montoPagadoC(x):
         except:
             return None
         else:    
-            return round(x["PagoComisionesMO"]*x['factor_conv_mo_mn']/6.86,2)   
+            if x["MonedaComisiones"]=="USD":
+                return round((x["PagoComisionesMO"]*1)/1,2)
+            else:
+                
+                if currencies[x["MonedaComisiones"]]==x['cod_moneda']:
+                    return round((x["PagoComisionesMO"]*x['factor_conv_mo_mn'])/6.86,2)
+                else:
+                    w = tc(x["MonedaComisiones"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
+                    return round(x["PagoComisionesMO"]*w,2)
+
+  
 def nombrecito(df,campofecha):
     nombre = "MoniDeuda_"+df[campofecha].min().strftime("%d%b") + "-"+df[campofecha].max(
     ).strftime("%d%b")+"("+pd.Timestamp.now().strftime("%d%b%H%M")+")"
