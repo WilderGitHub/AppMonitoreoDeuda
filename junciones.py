@@ -14,7 +14,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 casosEspeciales=['BID','CAF','IDA']
 mayores = [10,381,404,406]
-currencies = {"BS": 69,"BS ": 69,"UFV":76,"USD": 34,"EUR": 53,"KRW":999,"RMY": 998,"MVDOL": 75,"JPY":20}
+currencies = {"BS": 69,"BS ": 69,"UFV":76,"USD": 34,"EUR": 53,"KRW":999,"RMY": 998,"MVDOL": 75,"JPY":20,"XXX":997}
 montos=['CAPITAL ','INTERESES ','COMISIONES ']
 desAcree=['DESEMBOLSO DEL?[ LA]*','(?= PR.STAMO)']
 desPtmo=['POR DESEMBOLSO DEL?[ LA]* \w+ PR.STAMO ',' ']
@@ -94,7 +94,7 @@ def esdeuda(texto,criterio1,criterio2,criterio3):
     else:
         return False
 
-def extraeMonto(texto,key):
+''' def extraeMonto(texto,key):
     x = re.findall(key, texto)
     if x:
         xx=x[0][1].replace('.','').replace(',','.').replace(';','')
@@ -105,9 +105,31 @@ def extraeMonto(texto,key):
         else:
             monto=float(xx)
         #y=[x[0][0],float(xx)]
+        return monto '''
+def extraeMonto(texto,key):
+    x = re.findall(key, texto)
+    
+    if x:
+        
+        if not x[0][0].isalpha():
+            moneda=x[0][0]
+            x1=x[0][0].replace('.','').replace(',','.').replace(';','')
+            x2=x[0][1].replace('.','').replace(',','.').replace(';','')
+        
+            xx=x1+x2#[0][1].replace('.','').replace(',','.').replace(';','')
+        else:
+            xx=x[0][1].replace('.','').replace(',','.').replace(';','')
+        
+        try:
+            float(xx)
+        except:
+            monto="algo"
+        else:
+            monto=float(xx)
+        #y=[x[0][0],float(xx)]
         return monto
 
-def extraeMoneda(texto,key):
+''' def extraeMoneda(texto,key):
     x = re.findall(key, texto)
     if x:
         try:
@@ -116,7 +138,22 @@ def extraeMoneda(texto,key):
             moneda="---"
         else:
             moneda=x[0][0]
+        return moneda '''
+        
+def extraeMoneda(texto,key):
+    x = re.findall(key, texto)
+    if x:
+        try:
+            x[0][0]
+        except:
+            moneda="---"
+        else:
+            if x[0][0].isalpha():
+                moneda=x[0][0]
+            else:
+                moneda="XXX"
         return moneda
+
     
 def extraeEntidades(texto,key):
     x = re.findall(key, texto)
@@ -160,6 +197,13 @@ def montoDesembolsado (x):
         #normalmente es Dólares, pero podrían haber otras monedas, hay que generalizar la fórmula oe.
         return round(x['monto_mn']/x['factor_conv_mo_mn'],2)
 
+''' def aUSD(concepto):
+    a= x["PagoCapitalMO"] if not isinstance(x["PagoCapitalMO"], type(None)) else 0
+    b =x["PagoInteresesMO"] if not isinstance(x["PagoInteresesMO"],type(None)) else 0
+    c = x["PagoComisionesMO"] if not isinstance(x["PagoComisionesMO"],type(None)) else 0
+    totalMO= a+ b +c
+    totalUSD = x['monto_mo']
+    return x[concepto]*totalUSD/totalMO '''
 
 def montoPagadoK(x):
     if x['cve_debe_haber']=="H":
@@ -175,9 +219,15 @@ def montoPagadoK(x):
                 if currencies[x["MonedaCapital"]]==x['cod_moneda']:
                     return round((x["PagoCapitalMO"]*x['factor_conv_mo_mn'])/6.86,2)
                 else:
-                    w = tc(x["MonedaCapital"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
-                    return round(x["PagoCapitalMO"]*w,2)
-
+                    #w = tc(x["MonedaCapital"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
+                    #return round(x["PagoCapitalMO"]*w,2)
+                    a= x["PagoCapitalMO"] if not isinstance(x["PagoCapitalMO"], type(None)) else 0
+                    b =x["PagoInteresesMO"] if not isinstance(x["PagoInteresesMO"],type(None)) else 0
+                    c = x["PagoComisionesMO"] if not isinstance(x["PagoComisionesMO"],type(None)) else 0
+                    totalMO= a+ b +c
+                    totalUSD = x['monto_mo']
+                    return x["PagoCapitalMO"]*totalUSD/totalMO
+                    
 def montoPagadoI(x):
     if x['cve_debe_haber']=="H":
         try:
@@ -192,8 +242,15 @@ def montoPagadoI(x):
                 if currencies[x["MonedaIntereses"]]==x['cod_moneda']:
                     return round((x["PagoInteresesMO"]*x['factor_conv_mo_mn'])/6.86,2)
                 else:
-                    w = tc(x["MonedaIntereses"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
+                    ''' w = tc(x["MonedaIntereses"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
                     return round(x["PagoInteresesMO"]*w,2)
+                 '''
+                    a= x["PagoCapitalMO"] if not isinstance(x["PagoCapitalMO"], type(None)) else 0
+                    b =x["PagoInteresesMO"] if not isinstance(x["PagoInteresesMO"],type(None)) else 0
+                    c = x["PagoComisionesMO"] if not isinstance(x["PagoComisionesMO"],type(None)) else 0
+                    totalMO= a+ b +c
+                    totalUSD = x['monto_mo']
+                    return x["PagoInteresesMO"]*totalUSD/totalMO
         
 ''' def montoPagadoI(x):
     if x['cve_debe_haber']=="H":
@@ -226,8 +283,14 @@ def montoPagadoC(x):
                 if currencies[x["MonedaComisiones"]]==x['cod_moneda']:
                     return round((x["PagoComisionesMO"]*x['factor_conv_mo_mn'])/6.86,2)
                 else:
-                    w = tc(x["MonedaComisiones"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
-                    return round(x["PagoComisionesMO"]*w,2)
+                    ''' w = tc(x["MonedaComisiones"],"USD",convierteFecha(x["fecha_dia"]),usuario,pasguor)
+                    return round(x["PagoComisionesMO"]*w,2) '''
+                    a= x["PagoCapitalMO"] if not isinstance(x["PagoCapitalMO"], type(None)) else 0
+                    b =x["PagoInteresesMO"] if not isinstance(x["PagoInteresesMO"],type(None)) else 0
+                    c = x["PagoComisionesMO"] if not isinstance(x["PagoComisionesMO"],type(None)) else 0
+                    totalMO= a+ b +c
+                    totalUSD = x['monto_mo']
+                    return x["PagoComisionesMO"]*totalUSD/totalMO
 
   
 def nombrecito(df,campofecha):

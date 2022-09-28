@@ -16,15 +16,15 @@ sg.theme('LightGrey1')
 
 layout = [[sg.T("")],
           losInputs("Archivo: ","-GOI2-","GOI",34),
-          [sg.Button("Procesar", pad=((350, 0), 30), font='Arial 12', button_color=('black'))]]
+          [sg.Button("Hagamoslo", pad=((350, 0), 30), font='Arial 12', button_color=('black'))]]
 # Creamos la ventana
-window = sg.Window('Moni deuda pendiente', layout, size=(750, 150))
+window = sg.Window('Moni toreo Deuda Pendiente', layout, size=(750, 150))
 # escuchamos los eventos
 while True:
     event, values = window.read()
     if event == sg.WIN_CLOSED or event == "Exit":
         break
-    elif event == "Procesar":
+    elif event == "Hagamoslo":
         bdBruto = leer(os.path.abspath(values["GOI"]))
         # todo a minusculas
         bdBruto.columns = map(str.lower, bdBruto.columns)
@@ -45,15 +45,17 @@ while True:
             bdDeuda["ServicioAcreedor"]=bdBruto["glosa_comprob"].map(lambda x:extraeEntidades(x,acreedor))
             bdDeuda["ServicioPtmo"]=bdBruto["glosa_comprob"].map(lambda x:extraeEntidades(x,ptmo))
             bdDeuda["ServicioDeudor"]=bdBruto["glosa_comprob"].map(lambda x:extraeEntidades(x,deudor))
+            
             bdDeuda["MonedaCapital"]=bdBruto["glosa_comprob"].map(lambda x:extraeMoneda(x,montos[0]+buscaMontos))
             bdDeuda["PagoCapitalMO"]=bdBruto["glosa_comprob"].map(lambda x:extraeMonto(x,montos[0]+buscaMontos))
-            bdDeuda["PagoCapital$us"]=bdDeuda.apply(montoPagadoK, axis=1)
-            #bdDeuda["PagoCapital$us"]=bdDeuda.apply(montoPagado("PagoCapitalMO","MonedaCapital"), axis=1)
             bdDeuda["MonedaIntereses"]=bdBruto["glosa_comprob"].map(lambda x:extraeMoneda(x,montos[1]+buscaMontos))
             bdDeuda["PagoInteresesMO"]=bdBruto["glosa_comprob"].map(lambda x:extraeMonto(x,montos[1]+buscaMontos))
-            bdDeuda["PagoIntereses$us"]=bdDeuda.apply(montoPagadoI, axis=1)
             bdDeuda["MonedaComisiones"]=bdBruto["glosa_comprob"].map(lambda x:extraeMoneda(x,montos[2]+buscaMontos))
             bdDeuda["PagoComisionesMO"]=bdBruto["glosa_comprob"].map(lambda x:extraeMonto(x,montos[2]+buscaMontos))
+            
+            bdDeuda["PagoCapital$us"]=bdDeuda.apply(montoPagadoK, axis=1)
+            #bdDeuda["PagoCapital$us"]=bdDeuda.apply(montoPagado("PagoCapitalMO","MonedaCapital"), axis=1)
+            bdDeuda["PagoIntereses$us"]=bdDeuda.apply(montoPagadoI, axis=1)
             bdDeuda["PagoComisiones$us"]=bdDeuda.apply(montoPagadoC, axis=1)
             bdDeuda["Pagado"]=bdBruto["cod_mayor"].map(lambda x: "Pagado" if x == 10 else None)
             bdDeudaOK=bdDeuda.loc[:, ~bdDeuda.columns.isin(menosEstas)]
